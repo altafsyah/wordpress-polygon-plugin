@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Map Application</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
+    />
+  </head>
+  <body class="relative w-screen h-screen overflow-hidden flex flex-col">
+    <!-- Header -->
+    <header class="w-full bg-indigo-950 text-white">
+      <nav class="mx-3 flex justify-between items-center gap-6">
+        <ul class="flex justify-center items-center gap-6 py-4">
+          <li>
+            <button
+              type="button"
+              id="btn-create-category"
+              class="cursor-pointer hover:bg-indigo-500 px-3 py-2 transition-colors duration-200 rounded-md"
+            >
+              Create Category
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <!-- Main Map Container -->
+    <main
+      class="w-screen h-screen overflow-hidden bg-violet-300 flex-1 relative"
+    >
+      <div id="map" class="h-screen w-full"></div>
+      <div
+        class="px-3 py-1 rounded-md shadow border border-gray-100 absolute top-3 right-3 bg-white z-[999] min-w-[200px] max-h-[500px] overflow-y-auto"
+        id="map-legend"
+      ></div>
+    </main>
+
+    <!-- Building Creation Modal -->
+    <dialog
+      id="modal-new-building"
+      class="m-0 p-0 border-0 w-screen h-screen max-w-none max-h-none bg-black/10"
+    >
+      <div
+        class="z-[999] bg-white max-w-xl w-full h-fit rounded-xl shadow border border-gray-100 p-6 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      >
+        <h2 class="text-xl font-bold mb-4">Create New Building</h2>
+        <form
+          id="form-new-building"
+          class="grid grid-cols-1 md:grid-cols-2 gap-3"
+        >
+          <div class="space-y-2 flex flex-col">
+            <label for="building-name">Name</label>
+            <input
+              type="text"
+              name="name"
+              id="building-name"
+              required
+              class="px-2 py-1 rounded-md border border-gray-300"
+              placeholder="e.g. Aria Warehouse"
+            />
+          </div>
+          <div class="space-y-2 flex flex-col">
+            <label for="building-category">Category</label>
+            <select
+              class="px-2 py-1 rounded-md border border-gray-300"
+              name="category"
+              id="building-category"
+              required
+            ></select>
+          </div>
+          <div class="md:col-span-2 flex flex-col space-y-2">
+            <label for="building-geometry">Geometry</label>
+            <textarea
+              rows="5"
+              class="p-2 border border-gray-300 rounded-md disabled:bg-gray-100 text-gray-500"
+              readonly
+              name="geometry"
+              id="building-geometry"
+              required
+              placeholder="Draw a polygon on the map to generate geometry"
+            ></textarea>
+          </div>
+          <div class="md:col-span-2 flex justify-between items-center">
+            <button
+              type="button"
+              id="btn-cancel-building"
+              class="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2 border border-gray-100 bg-black text-white rounded-md hover:bg-gray-800"
+            >
+              Save Building
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- Category Creation/Edit Modal -->
+    <dialog
+      id="modal-category"
+      class="m-0 p-0 border-0 w-screen h-screen max-w-none max-h-none bg-black/10"
+    >
+      <div
+        class="z-[999] bg-white max-w-xl w-full h-fit rounded-xl shadow border border-gray-100 p-6 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      >
+        <h2 id="category-modal-title" class="text-xl font-bold mb-4">
+          Create Category
+        </h2>
+        <form id="form-category" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="space-y-2 flex flex-col">
+            <label for="category-name">Name</label>
+            <input
+              type="text"
+              name="name"
+              id="category-name"
+              required
+              class="px-2 py-1 rounded-md border border-gray-300"
+              placeholder="e.g. Warehouses"
+            />
+          </div>
+          <div class="space-y-2 flex flex-col">
+            <label for="category-color">Label Color</label>
+            <input type="color" name="color" id="category-color" required />
+          </div>
+          <div class="md:col-span-2 flex justify-between items-center">
+            <button
+              type="button"
+              id="btn-cancel-category"
+              class="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2 border border-gray-100 bg-black text-white rounded-md hover:bg-gray-800"
+            >
+              Save Category
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- Category Management Card -->
+    <div
+      id="category-card"
+      class="fixed bottom-6 right-6 z-[1000] bg-white shadow-lg rounded-xl border border-gray-200 p-4 min-w-[260px] max-w-[320px]"
+    >
+      <h3 class="font-bold mb-3">Categories</h3>
+      <ul id="category-list" class="space-y-2"></ul>
+    </div>
+
+    <!-- Delete Category Confirmation -->
+    <dialog
+      id="modal-delete-category"
+      class="rounded-xl p-6 bg-white border border-gray-200 shadow-lg top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+    >
+      <div>
+        <h3 class="text-lg font-bold mb-2">Delete Category</h3>
+        <p class="mb-4">
+          Are you sure you want to delete this category? This action cannot be
+          undone.
+        </p>
+        <div class="flex gap-3 justify-end">
+          <button
+            id="btn-cancel-delete"
+            class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-delete"
+            class="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="/assets/js/main.js" type="module"></script>
+  </body>
+</html>
