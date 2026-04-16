@@ -1,2 +1,5 @@
 .htaccess
-core/node_modules
+**/node_modules
+public/build
+public/*.tsbuildinfo
+
